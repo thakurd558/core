@@ -22,10 +22,13 @@
 
 namespace Antares\Publisher;
 
+use Antares\Extension\Manager;
 use Illuminate\Database\Seeder as IlluminateSeeder;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Migrations\Migrator;
 use Antares\Contracts\Publisher\Publisher;
+use Closure;
+use Illuminate\Support\Facades\File;
 use stdClass;
 
 class MigrateManager implements Publisher
@@ -53,6 +56,13 @@ class MigrateManager implements Publisher
     protected $seeder;
 
     /**
+     * Extensions manager instance.
+     *
+     * @var Manager
+     */
+    protected $manager;
+
+    /**
      * Construct a new instance.
      * 
      * @param Container $app
@@ -64,6 +74,7 @@ class MigrateManager implements Publisher
         $this->app      = $app;
         $this->migrator = $migrator;
         $this->seeder   = $seeder;
+        $this->manager = app()->make('antares.extension');
     }
 
     /**
@@ -73,8 +84,8 @@ class MigrateManager implements Publisher
      */
     protected function createMigrationRepository()
     {
-
         $repository = $this->migrator->getRepository();
+
         if (!$repository->repositoryExists()) {
             $repository->createRepository();
         }
@@ -113,7 +124,7 @@ class MigrateManager implements Publisher
             "{$vendorPath}/{$name}/migrations/",
         ];
         foreach ($paths as $path) {
-            if ($this->app->make('files')->isDirectory($path)) {
+            if (File::isDirectory($path)) {
                 $this->run($path);
             }
         }
@@ -134,11 +145,13 @@ class MigrateManager implements Publisher
      */
     protected function getPaths($name, $directory = 'migrations')
     {
-        $extension  = $this->app->make('antares.extension');
-        $finder     = $this->app->make('antares.extension.finder');
-        $extension->fill();
-        $basePath   = $finder->resolveExtensionPath(rtrim($extension->option($name, 'path'), '/'));
-        $sourcePath = $finder->resolveExtensionPath(rtrim($extension->option($name, 'source-path'), '/'));
+        $package = $this->manager->getAvailableExtensions()->findByName($name);
+
+        if($package === null) {
+            return [];
+        }
+
+        $basePath = $package->getPath();
 
         $paths = [
             "{$basePath}/resources/database/{$directory}/",
@@ -146,13 +159,6 @@ class MigrateManager implements Publisher
             "{$basePath}/src/{$directory}/",
         ];
 
-        if ($basePath !== $sourcePath && !empty($sourcePath)) {
-            $paths = array_merge($paths, [
-                "{$sourcePath}/resources/database/{$directory}/",
-                "{$sourcePath}/resources/{$directory}/",
-                "{$sourcePath}/src/{$directory}/",
-            ]);
-        }
         return $paths;
     }
 
@@ -165,42 +171,33 @@ class MigrateManager implements Publisher
     public function extension($name)
     {
         $paths = $this->getPaths($name);
-        $files = $this->app->make('files');
+
         foreach ($paths as $path) {
-            if ($files->isDirectory($path)) {
+            if (File::isDirectory($path)) {
                 $this->run($path);
             }
         }
+
         $this->seed($name);
     }
 
     /**
      * run seeds from all files in seeds directory
      * 
-     * @param type $name
+     * @param string $name
+     * @param string|array $paths
      */
     public function seed($name, $paths = null)
     {
-        $directories = is_null($paths) ? $this->getPaths($name, 'seeds') : $paths;
-        $files       = $this->app->make('files');
+        $directories = count($paths) ? $paths : $this->getPaths($name, 'seeds');
 
+        $this->eachFileInPaths($directories, function($file) {
+            $class = $this->prepareSeedClass($file);
 
-        foreach ($directories as $path) {
-
-
-            if ($files->isDirectory($path)) {
-                $allFiles = $files->allFiles($path);
-
-
-                foreach ($allFiles as $file) {
-
-                    $class = $this->prepareSeedClass($file);
-                    if (!is_null($class)) {
-                        $this->seeder->call($this->prepareSeedClass($file));
-                    }
-                }
+            if ($class !== null) {
+                $this->seeder->call($class);
             }
-        }
+        });
     }
 
     /**
@@ -210,22 +207,21 @@ class MigrateManager implements Publisher
      * @param String $directory
      * @return array
      */
-    protected function uninstallPathes($name, $directory = 'migrations')
+    protected function uninstallPaths($name, $directory = 'migrations')
     {
-        $finder     = $this->app->make('antares.extension.finder');
-        $basePathes = [
-            $finder->resolveExtensionPath(rtrim('vendor::antares/' . $name, '/')),
-            $finder->resolveExtensionPath(rtrim('vendor::antares/modules/' . $name, '/')),
-        ];
-        $paths      = [];
-        foreach ($basePathes as $basePath) {
-            $paths[] = [
-                "{$basePath}/resources/database/{$directory}/",
-                "{$basePath}/resources/{$directory}/",
-                "{$basePath}/src/{$directory}/",
-            ];
+        $package = $this->manager->getAvailableExtensions()->findByName($name);
+
+        if($package === null) {
+            return [];
         }
-        return array_flatten($paths);
+
+        $basePath = $package->getPath();
+
+        return [
+            "{$basePath}/resources/database/{$directory}/",
+            "{$basePath}/resources/{$directory}/",
+            "{$basePath}/src/{$directory}/",
+        ];
     }
 
     /**
@@ -245,46 +241,49 @@ class MigrateManager implements Publisher
 
     /**
      * 
-     * @param type $name
+     * @param string $name
      */
-    public function unseed($name)
+    public function unSeed($name)
     {
-        $paths = $this->uninstallPathes($name, 'seeds');
-        $files = $this->app->make('files');
-        foreach ($paths as $path) {
-            if (!$files->isDirectory($path)) {
-                continue;
-            }
-            $allFiles = $files->allFiles($path);
-            foreach ($allFiles as $file) {
-                $className = $this->prepareSeedClass($file);
-                if (!is_null($className)) {
-                    $seed = new $className;
-                    $seed->down();
+        $paths = $this->uninstallPaths($name, 'seeds');
+
+        $this->eachFileInPaths($paths, function($file) {
+            $className = $this->prepareSeedClass($file);
+
+            if ($className !== null) {
+                $seedInstance = new $className;
+
+                if( method_exists($seedInstance, 'down') ) {
+                    $seedInstance->down();
                 }
             }
-        }
+        });
     }
 
     /**
      * uninstalling component
-     * @param type $name
+     * @param string $name
      */
     public function uninstall($name)
     {
-        $this->unseed($name);
-        $paths = $this->uninstallPathes($name);
+        $this->unSeed($name);
+        $paths = $this->uninstallPaths($name);
+
         foreach ($paths as $path) {
-            if (!$this->app->make('files')->isDirectory($path)) {
+            if (! File::isDirectory($path)) {
                 continue;
             }
+
             $files = $this->migrator->getMigrationFiles($path);
             $this->migrator->requireFiles($path, $files);
+
             foreach ($files as $file) {
                 $migration           = $this->migrator->resolve($file);
                 $migrator            = new stdClass();
                 $migrator->migration = $file;
+
                 $this->migrator->getRepository()->delete($migrator);
+
                 if (method_exists($migration, 'down')) {
                     $migration->down();
                 }
@@ -302,6 +301,28 @@ class MigrateManager implements Publisher
         $this->package('core/memory');
         $this->package('core/auth');
         $this->package('core/form');
+    }
+
+    /**
+     * Calls callbacks for each file in the given paths.
+     *
+     * @param array $paths
+     * @param Closure $callback
+     */
+    private function eachFileInPaths(array $paths, Closure $callback)
+    {
+        foreach($paths as $path)
+        {
+            if (! File::isDirectory($path)) {
+                continue;
+            }
+
+            $files = File::allFiles($path);
+
+            foreach($files as $file) {
+                $callback($file);
+            }
+        }
     }
 
 }

@@ -19,20 +19,20 @@
  * @link       http://antaresproject.io
  */
 
-
 namespace Antares\Installation\Http\Controllers;
 
+use Antares\Extension\Contracts\Handlers\OperationHandlerContract;
+use Antares\Extension\Model\Operation;
 use Antares\Installation\Processor\Installer as InstallerProcessor;
 use Antares\Foundation\Http\Controllers\BaseController;
 use Antares\Installation\Processor\Installer;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Input;
 use Illuminate\Support\MessageBag;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Antares\Html\Builder;
 
-class InstallerController extends BaseController
+class InstallerController extends BaseController implements OperationHandlerContract
 {
 
     /**
@@ -106,11 +106,12 @@ class InstallerController extends BaseController
      *
      * POST (:antares)/install/create
      *
+     * @param Request $request
      * @return mixed
      */
-    public function store()
+    public function store(Request $request)
     {
-        return $this->processor->store($this, Input::all());
+        return $this->processor->store($this, $request->all());
     }
 
     /**
@@ -128,11 +129,14 @@ class InstallerController extends BaseController
      * Show components selection form
      * POST (:antares)/install/components/store
      *
+     * @param Request $request
      * @return mixed
      */
-    public function storeComponents()
+    public function storeComponents(Request $request)
     {
-        return $this->processor->storeComponents($this, Input::all());
+        $selected = (array) $request->get('extension', []);
+
+        return $this->processor->storeComponents($this, $selected);
     }
 
     /**
@@ -261,8 +265,6 @@ class InstallerController extends BaseController
      */
     public function componentsSucceed(array $data)
     {
-
-
         return view('antares/installer::components', $data);
     }
 
@@ -306,6 +308,42 @@ class InstallerController extends BaseController
     public function failed()
     {
         return view('antares/installer::installation.failed');
+    }
+
+    /**
+     * Returns the view about installation progress.
+     *
+     * @return RedirectResponse
+     */
+    public function showInstallProgress() {
+        return redirect()->route('installation.installer.progress.index');
+    }
+
+    /**
+     * @param Operation $operation
+     * @return mixed
+     */
+    public function operationSuccess(Operation $operation)
+    {
+        \Log::debug('operationSuccess', [$operation->getMessage()]);
+    }
+
+    /**
+     * @param Operation $operation
+     * @return mixed
+     */
+    public function operationFailed(Operation $operation)
+    {
+        \Log::debug('operationFailed', [$operation->getMessage()]);
+    }
+
+    /**
+     * @param Operation $operation
+     * @return mixed
+     */
+    public function operationInfo(Operation $operation)
+    {
+        \Log::debug('operationInfo', [$operation->getMessage()]);
     }
 
 }

@@ -19,13 +19,15 @@
  * @link       http://antaresproject.io
  */
 
-
 namespace Antares\Installation;
 
 use Antares\Contracts\Installation\Installation as InstallationContract;
 use Antares\Contracts\Installation\Requirement as RequirementContract;
 use Antares\Foundation\Support\Providers\ModuleServiceProvider;
 use Antares\Installation\Scripts\WatchDog;
+use Antares\Extension\Events\Installed;
+use Antares\Installation\Listeners\IncrementProgress;
+use Illuminate\Routing\Router;
 
 class InstallerServiceProvider extends ModuleServiceProvider
 {
@@ -36,6 +38,12 @@ class InstallerServiceProvider extends ModuleServiceProvider
      * @var string|null
      */
     protected $namespace = 'Antares\Installation\Http\Controllers';
+
+    protected $listen = [
+        Installed::class => [
+            IncrementProgress::class,
+        ],
+    ];
 
     /**
      * Register the service provider.
@@ -54,6 +62,14 @@ class InstallerServiceProvider extends ModuleServiceProvider
         $this->app->singleton('antares.watchdog', function($app) {
             return new WatchDog($app->make('config'));
         });
+
+        $this->app->singleton(Progress::class);
+    }
+
+    public function boot(Router $router) {
+        parent::boot($router);
+
+        $this->loadRoutes();
     }
 
     /**
@@ -76,8 +92,7 @@ class InstallerServiceProvider extends ModuleServiceProvider
      */
     protected function loadRoutes()
     {
-        $path = realpath(__DIR__ . '/../');
-        $this->loadBackendRoutesFrom("{$path}/src/routes.php");
+        $this->loadBackendRoutesFrom(__DIR__ . '/routes.php');
     }
 
 }

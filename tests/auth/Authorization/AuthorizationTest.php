@@ -32,7 +32,7 @@ class AuthorizationTest extends ApplicationTestCase
     /**
      * Acl Container instance.
      *
-     * @var Antares\Authorization\Authorization
+     * @var \Antares\Authorization\Authorization
      */
     private $stub = null;
 

@@ -129,7 +129,7 @@ class Asset
      */
     public function add($name, $source, $dependencies = [], $attributes = [], $replaces = [])
     {
-        $type = (pathinfo($source, PATHINFO_EXTENSION) == 'css') ? 'style' : 'script';
+        $type = (pathinfo($source, PATHINFO_EXTENSION) === 'css') ? 'style' : 'script';
         return $this->$type($name, $source, $dependencies, $attributes, $replaces);
     }
 

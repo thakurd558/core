@@ -19,18 +19,20 @@
  * @link       http://antaresproject.io
  */
 
-
 namespace Antares\Installation\Processor;
 
+use Antares\Extension\Contracts\ExtensionContract;
+use Antares\Extension\Jobs\BulkExtensionsBackgroundJob;
+use Antares\Extension\Manager;
 use Antares\Installation\Http\Controllers\InstallerController;
 use Antares\Installation\Http\Form\License as LicenseForm;
-use Antares\Contracts\Installation\Installation;
 use Antares\Contracts\Installation\Requirement;
+use Antares\Installation\Installation;
+use Antares\Installation\Progress;
 use Antares\Installation\Repository\Components;
 use Antares\Installation\Repository\License;
-use Illuminate\Support\Facades\Config;
+use Antares\Support\Facades\Config;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\File;
 use Symfony\Component\Finder\Finder;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -41,6 +43,7 @@ use Illuminate\View\View;
 use ReflectionException;
 use Antares\Model\User;
 use Exception;
+use Illuminate\Support\Facades\File;
 
 class Installer
 {
@@ -69,7 +72,7 @@ class Installer
     /**
      * license repository instance
      *
-     * @var License 
+     * @var License
      */
     protected $license;
 
@@ -118,42 +121,45 @@ class Installer
     }
 
     /**
-     * Clearing storage files before installation 
+     * Clearing storage files before installation
      */
     protected function clearStorage()
     {
-        $filesystem = File::getFacadeRoot();
         $finder     = new Finder();
-        $paths      = config('antares/installer::storage_path');
+        $paths      = (array) config('antares/installer::storage_path', []);
         $finder     = $finder->files()->ignoreVCS(true);
+
         foreach ($paths as $path) {
             $current = storage_path($path);
+
             if (!is_dir($current)) {
                 continue;
             }
             $finder = $finder->in($current);
         }
+
         $finder->exclude('.gitignore');
+
         foreach ($finder as $element) {
-            $filesystem->delete($element);
+            File::delete($element);
         }
         try {
             $directories = $finder->directories();
             foreach ($directories as $dir) {
-                $files = $filesystem->allFiles($dir->getPath(), true);
+                $files = File::allFiles($dir->getPath(), true);
                 if (empty($files)) {
-                    $filesystem->deleteDirectory($dir->getPath());
+                    File::deleteDirectory($dir->getPath());
                 }
             }
         } catch (Exception $e) {
-            
+
         }
         return;
     }
 
     /**
      * clear global cache
-     * 
+     *
      * @return boolean
      */
     protected function clearCache()
@@ -188,7 +194,7 @@ class Installer
 
     /**
      * processing store license details
-     * 
+     *
      * @param InstallerController $listener
      * @param Request $request
      * @return View|RedirectResponse
@@ -245,105 +251,140 @@ class Installer
      * launch components/modules installation.
      *
      * @param  object  $listener
-     * @param  array   $input
+     * @param  array   $selected
      *
      * @return mixed
      */
-    public function storeComponents($listener, array $input)
+    public function storeComponents($listener, array $selected)
     {
         try {
-            $this->components->store($input);
-            app('antares.memory')->make('component')->finish();
-        } catch (Exception $e) {
+            $required   = (array) config('installer.required', []);
+            $extensions = array_merge($required, $selected);
+
+            $memory     = app()->make('antares.memory')->make('primary');
+            $memory->put('app.installation.components', $extensions);
+
+            /* @var $progress Progress */
+            $progress   = app()->make(Progress::class);
+            $progress->start();
+            $progress->save();
+
+            $memory->finish();
+
+            $job = new BulkExtensionsBackgroundJob($extensions, \Antares\Extension\Processors\Installer::class, $progress->getFilePath());
+            $job->onQueue('installation');
+
+            dispatch($job);
+        }
+        catch (Exception $e) {
             Log::emergency($e);
             return $listener->doneFailed();
         }
-        return $this->done($listener);
+
+        return $listener->showInstallProgress();
     }
 
     /**
      * shows components form
-     * 
+     *
      * @param object $listener
      * @return mixed
      */
     public function components($listener)
     {
         $form = Form::of('components', function ($form) {
-                    $attributes = [
-                        'url'    => handles("antares::install/components/store"),
-                        'method' => 'POST'
+            $attributes = [
+                'url'    => handles("antares::install/components/store"),
+                'method' => 'POST'
+            ];
+
+            $form->attributes($attributes);
+            $form->name('Components list');
+            $list = $this->getComponentsList();
+
+            $form->fieldset(function ($fieldset) use($list) {
+                $fieldset->legend('Required components');
+                $required = (array) array_get($list, 'required', []);
+
+                /* @var $extension ExtensionContract */
+                foreach ($required as $extension) {
+                    $name = $extension->getPackage()->getName();
+
+                    $data = [
+                        'description'   => $extension->getPackage()->getDescription(),
+                        'version'       => $extension->getPackage()->getPrettyVersion(),
                     ];
-                    $form->attributes($attributes);
-                    $list       = $this->getComponentsList();
 
-                    $form->name('Components list');
-                    $form->fieldset(function ($fieldset) use($list) {
+                    $fieldset->control('input:checkbox', 'required[]')
+                        ->label($name)
+                        ->value($name)
+                        ->help(implode(', ', $data))
+                        ->checked()
+                        ->attributes(['disabled' => 'disabled', 'readonly' => 'readonly']);
+                }
+            });
 
-                        $fieldset->legend('Required components');
-                        $required = array_get($list, 'required', []);
-                        foreach ($required as $name => $data) {
-                            $fieldset->control('input:checkbox', 'required[]')
-                                    ->label(array_get($data, 'full_name'))
-                                    ->value($name)
-                                    ->help(implode(', ', array_only($data, ['description', 'author', 'version'])))
-                                    ->checked()
-                                    ->attributes(['disabled' => 'disabled', 'readonly' => 'readonly']);
-                            ;
-                        }
+            $form->fieldset(function ($fieldset) use($list) {
+                $fieldset->legend('Available optional components');
+                $optional = (array) array_get($list, 'optional', []);
+
+                /* @var $extension ExtensionContract */
+                foreach ($optional as $extension) {
+                    $name = $extension->getPackage()->getName();
+
+                    $data = [
+                        'description'   => $extension->getPackage()->getDescription(),
+                        'version'       => $extension->getPackage()->getPrettyVersion(),
+                    ];
+
+                    $fieldset->control('input:checkbox', 'extension[]')
+                        ->label($name)
+                        ->value($name)
+                        ->help(implode(', ', $data));
+                }
+
+                $fieldset->control('button', 'cancel')
+                    ->field(function() {
+                        return app('html')->link(handles("antares::install/create"), trans('antares/foundation::label.cancel'), ['class' => 'btn btn--md btn--default mdl-button mdl-js-button']);
                     });
-                    $form->fieldset(function ($fieldset) use($list) {
-                        $fieldset->legend('Available optional components');
-                        $available = array_get($list, 'list', []);
-                        $optional  = array_get($list, 'optional', []);
 
-                        foreach ($available as $name => $data) {
-                            $checked = in_array($name, $optional);
-                            $fieldset->control('input:checkbox', 'extension[]')
-                                    ->label(array_get($data, 'full_name'))
-                                    ->value($name)
-                                    ->help(implode(', ', array_only($data, ['description', 'author', 'version'])))
-                                    ->checked($checked);
-                            ;
-                        }
-                        $fieldset->control('button', 'cancel')
-                                ->field(function() {
-                                    return app('html')->link(handles("antares::install/create"), trans('antares/foundation::label.cancel'), ['class' => 'btn btn--md btn--default mdl-button mdl-js-button']);
-                                });
+                $fieldset->control('button', 'button')
+                    ->attributes(['type' => 'submit', 'class' => 'btn btn--md btn--primary mdl-button mdl-js-button'])
+                    ->value(trans('antares/foundation::label.next'));
+            });
+        });
 
-                        $fieldset->control('button', 'button')
-                                ->attributes(['type' => 'submit', 'class' => 'btn btn--md btn--primary mdl-button mdl-js-button'])
-                                ->value(trans('antares/foundation::label.next'));
-                    });
-                });
         return $listener->componentsSucceed(['form' => $form]);
     }
 
     /**
      * Gets list of available components
-     * 
+     *
      * @return array
      */
     protected function getComponentsList()
     {
-        $config     = config('installer.required', []);
-        $optional   = config('installer.optional', []);
-        $list       = app('antares.extension.finder')->detect();
-        $required   = [];
-        $components = [];
-        $list->each(function($element, $key) use($config, &$list, &$required, &$components) {
-            if (in_array($key, $config)) {
-                $required = array_add($required, $element['name'], $element);
-                $list->forget($key);
-            } else {
-                $components[$key] = $element;
+        /* @var $manager Manager */
+        $manager    = app()->make(Manager::class);
+        $extensions = $manager->getAvailableExtensions();
+
+        $requiredConfig = (array) config('installer.required', []);
+
+        $required = [];
+        $optional = [];
+
+        foreach($extensions as $extension) {
+            $name = $extension->getPackage()->getName();
+
+            if( in_array($name, $requiredConfig, true) ) {
+                $required[] = $extension;
             }
-        });
-        return [
-            'optional' => $optional,
-            'list'     => $components,
-            'required' => $required
-        ];
+            else {
+                $optional[] = $extension;
+            }
+        }
+
+        return compact('required', 'optional');
     }
 
     /**
@@ -355,7 +396,6 @@ class Installer
      */
     public function done($listener)
     {
-        app('antares.extension')->detect();
         return $listener->doneSucceed();
     }
 

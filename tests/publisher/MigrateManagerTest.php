@@ -20,6 +20,8 @@
 
 namespace Antares\Publisher\TestCase;
 
+use Antares\Extension\Collections\Extensions;
+use Antares\Extension\Contracts\ExtensionContract;
 use Antares\Testbench\ApplicationTestCase;
 use Antares\Publisher\MigrateManager;
 use Mockery as m;
@@ -37,6 +39,8 @@ class MigrateManagerTest extends ApplicationTestCase
         $migrator   = m::mock('\Illuminate\Database\Migrations\Migrator');
         $repository = m::mock('\Illuminate\Database\Migrations\DatabaseMigrationRepository');
         $seeder     = m::mock('\Illuminate\Database\Seeder');
+
+        $this->app['antares.extension'] = m::mock('\Antares\Extension\Manager');
 
 
         $migrator->shouldReceive('getRepository')->once()->andReturn($repository)
@@ -59,23 +63,23 @@ class MigrateManagerTest extends ApplicationTestCase
 
         $app['migrator']                 = $migrator                        = m::mock('\Illuminate\Database\Migrations\Migrator');
         $app['files']                    = $files                           = m::mock('\Illuminate\Filesystem\Filesystem');
-        $app['antares.extension']        = $extension                       = m::mock('\Antares\Extension\Factory');
-        $app['antares.extension.finder'] = $finder                          = m::mock('\Antares\Extension\Finder');
-
-
+        $app['antares.extension'] = $extension                          = m::mock('\Antares\Extension\Manager');
 
         $repository = m::mock('\Illuminate\Database\Migrations\DatabaseMigrationRepository');
 
-        $extension->shouldReceive('option')->twice()->with('foo/bar', 'path')->andReturn('/foo/path/foo/bar/')
-                ->shouldReceive('option')->twice()->with('foo/bar', 'source-path')->andReturn('/foo/app/foo/bar/')
-                ->shouldReceive('option')->twice()->with('laravel/framework', 'path')->andReturn('/foo/path/laravel/framework/')
-                ->shouldReceive('option')->twice()->with('laravel/framework', 'source-path')->andReturn('/foo/path/laravel/framework/')
-                ->shouldReceive('fill')->times(4)->andReturnSelf();
+        $packages = m::mock(ExtensionContract::class)
+            ->shouldReceive('getPath')->twice()->andReturn('/foo/path/foo/bar')->getMock()
+            ->shouldReceive('getPath')->twice()->andReturn('/foo/app/foo/bar')->getMock()
+            ->shouldReceive('getPath')->times(4)->andReturn('/foo/path/laravel/framework')->getMock();
 
+        $extensionsCollection = m::mock(Extensions::class)
+            ->shouldReceive('findByName')->twice()->with('foo/bar')->andReturn($packages)->getMock()
+            ->shouldReceive('findByName')->twice()->with('foo/bar')->andReturn($packages)->getMock()
+            ->shouldReceive('findByName')->times(4)->with('laravel/framework')->andReturn($packages)->getMock();
 
-        $finder->shouldReceive('resolveExtensionPath')->twice()->with('/foo/path/foo/bar')->andReturn('/foo/path/foo/bar')
-                ->shouldReceive('resolveExtensionPath')->twice()->with('/foo/app/foo/bar')->andReturn('/foo/app/foo/bar')
-                ->shouldReceive('resolveExtensionPath')->times(4)->with('/foo/path/laravel/framework')->andReturn('/foo/path/laravel/framework');
+        $extension->shouldReceive('getAvailableExtensions-')->twice()->andReturn($extensionsCollection)->getMock()
+                ->shouldReceive('getAvailableExtensions')->twice()->andReturn($extensionsCollection)->getMock()
+                ->shouldReceive('getAvailableExtensions')->times(4)->andReturn($extensionsCollection)->getMock();
 
 
 
@@ -118,8 +122,9 @@ class MigrateManagerTest extends ApplicationTestCase
     {
         $app = $this->app;
 
-        $app['files']     = $files            = m::mock('\Illuminate\Filesystem\Filesystem');
-        $app['migrator']  = $migrator         = m::mock('\Illuminate\Database\Migrations\Migrator');
+        $app['files']               = $files            = m::mock('\Illuminate\Filesystem\Filesystem');
+        $app['migrator']            = $migrator         = m::mock('\Illuminate\Database\Migrations\Migrator');
+        $app['antares.extension']   = $extension        = m::mock('\Antares\Extension\Manager');
         $app['path.base'] = '/foo/path/';
 
         $repository = m::mock('\Illuminate\Database\Migrations\DatabaseMigrationRepository');

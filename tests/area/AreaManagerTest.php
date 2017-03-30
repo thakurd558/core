@@ -59,10 +59,10 @@ class AreaManagerTest extends ApplicationTestCase
     {
         $this->markTestIncomplete('This test has not been implemented yet because of wrong isAny method implementation.');
 
-        $this->auth->shouldReceive('isAny')->withArgs(['member'])->once()->andReturn(false);
+        $this->app['auth']->shouldReceive('isAny')->withArgs(['member'])->once()->andReturn(false);
 
         $adminArea   = new Area('admin', 'Admin Area');
-        $areaManager = new AreaManager($this->auth);
+        $areaManager = new AreaManager($this->app['auth']);
 
         $this->assertTrue($areaManager->isAdminArea());
         $this->assertFalse($areaManager->isClientArea());

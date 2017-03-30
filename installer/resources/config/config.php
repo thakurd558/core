@@ -33,6 +33,9 @@ return [
     /**
      * Which commands should be watched and start when not run
      */
+    'pre_installation_commands' => [
+        'queue:listen --queue=installation --timeout=0 --tries=0'
+    ],
     'post_installation_commands' => [
         'notifications:start'
     ],

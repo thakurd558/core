@@ -18,13 +18,13 @@
  * @link       http://antaresproject.io
  */
 
-
 namespace Antares\Area;
 
 use Antares\Area\Contracts\AreaManagerContract;
 use Antares\Area\Contracts\AreaContract;
 use Illuminate\Auth\AuthManager as Auth;
 use Antares\Area\Model\Area;
+use Illuminate\Support\Arr;
 
 class AreaManager implements AreaManagerContract
 {
@@ -34,6 +34,16 @@ class AreaManager implements AreaManagerContract
      * @var Auth
      */
     protected $auth;
+
+    /**
+     * @var array
+     */
+    protected $providedAreas = [];
+
+    /**
+     * @var string
+     */
+    protected $defaultArea = '';
 
     /**
      * Collection of available areas
@@ -49,11 +59,12 @@ class AreaManager implements AreaManagerContract
      */
     public function __construct(Auth $auth)
     {
-        $this->auth = $auth;
-        $areas      = config('areas.areas', []);
+        $this->auth             = $auth;
+        $this->providedAreas    = (array) config('areas.areas', []);
+        $this->defaultArea      = (string) config('areas.default', '');
 
-        foreach ($areas as $name => $title) {
-            array_set($this->areas, $name, new Area($name, trans($title)));
+        foreach ($this->providedAreas as $name => $title) {
+            Arr::set($this->areas, $name, new Area($name, trans($title)));
         }
     }
 
@@ -64,6 +75,14 @@ class AreaManager implements AreaManagerContract
      */
     public function getCurrentArea()
     {
+//        if( $this->isAdminArea() ) {
+//            return $this->areas[$this->defaultArea];
+//        }
+//
+//        $areas = Arr::except($this->providedAreas, $this->defaultArea);
+//
+//        return key($areas);
+//
         return $this->isAdminArea() ? $this->areas[config('areas.default')] : key((array_except(config('areas.areas'), config('areas.default'))));
     }
 
@@ -101,7 +120,7 @@ class AreaManager implements AreaManagerContract
      * Return an area object based on ID. Null returns if not found.
      * 
      * @param string $id
-     * @return AreaContract | null
+     * @return AreaContract|null
      */
     public function getById($id)
     {
@@ -110,6 +129,8 @@ class AreaManager implements AreaManagerContract
                 return $area;
             }
         }
+
+        return null;
     }
 
 }

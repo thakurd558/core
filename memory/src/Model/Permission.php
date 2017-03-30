@@ -19,21 +19,34 @@
  * @link       http://antaresproject.io
  */
 
-
 namespace Antares\Memory\Model;
 
 use Antares\Memory\Exception\PermissionNotSavedException;
 use Antares\Model\Permission as PermissionModel;
-use Antares\Support\Facades\Foundation;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Antares\Brands\Model\Brands;
 use Antares\Model\Component;
 use Antares\Model\Eloquent;
 use Antares\Model\Action;
 use Antares\Model\Role;
 use Exception;
+use Cache;
+use Illuminate\Database\Eloquent\Collection;
+use Log;
+use DB;
 
+/**
+ * Class Permission
+ * @package Antares\Memory\Model
+ * @property int $id
+ * @property string $name
+ * @property string $vendor
+ * @property int $status
+ * @property bool $required
+ * @property array $options
+ * @property string $actions
+ * @property string $permissions
+ * @property Action[]|Collection $attachedActions
+ */
 class Permission extends Eloquent
 {
 
@@ -50,30 +63,35 @@ class Permission extends Eloquent
     protected $morphClass = 'Permission';
 
     /**
-     * @var Antares\Model\Role 
+     * {@inheritdoc}
      */
-    protected $role;
+    protected $casts = [
+        'id'        => 'integer',
+        'brand_id'  => 'integer',
+        'status'    => 'integer',
+        'required' 	=> 'boolean',
+        'options'   => 'array',
+    ];
 
     /**
-     * @param array $attributes
-     */
-    public function __construct(array $attributes = array())
-    {
-        parent::__construct($attributes);
-        $this->role = Foundation::make(Role::class);
-    }
-
-    /**
-     * fetching all permissions
+     * Fetching all permissions.
+     *
+     * @param int|null $brandId
+     * @return Permission[]|\Illuminate\Database\Eloquent\Collection|static[]
      */
     public static function fetchAll($brandId = null)
     {
-        $models = (!is_null($brandId)) ? static::query()->where('brand_id', '=', $brandId)->orWhere('brand_id')->get() : static::query()->get();
-        return $models->toArray();
+        $query = Permission::query()->with('attachedActions');
+
+        if($brandId !== null) {
+            $query->where('brand_id', '=', $brandId)->orWhere('brand_id');
+        }
+
+        return $query->get();
     }
 
     /**
-     * @return type
+     * @return Action[]|\Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function attachedActions()
     {
@@ -81,7 +99,7 @@ class Permission extends Eloquent
     }
 
     /**
-     * @return type
+     * @return Brands[]|\Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function brands()
     {
@@ -89,7 +107,7 @@ class Permission extends Eloquent
     }
 
     /**
-     * @return type
+     * @return PermissionModel[]|\Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function permission()
     {
@@ -97,7 +115,7 @@ class Permission extends Eloquent
     }
 
     /**
-     * @return type
+     * @return Component|\Illuminate\Database\Eloquent\Relations\HasOne
      */
     public function component()
     {
@@ -105,110 +123,162 @@ class Permission extends Eloquent
     }
 
     /**
-     * @param type $permissions
+     * @param string $permissions
      * @return array
      */
-    protected function permissions($permissions = null)
+    protected function mapPermissionsToArray($permissions = null)
     {
-        if (is_null($permissions) OR strlen($permissions) <= 0) {
+        if ($permissions === null || $permissions === '') {
             return [];
         }
+
         $exploded = explode(';', $permissions);
         $maps     = [];
+
         foreach ($exploded as $current) {
-            if (!strlen($current)) {
+            if($current === '') {
                 continue;
             }
+
             $permission = explode('=', $current);
-            $maps[]     = [$permission[0] => (boolean) $permission[1]];
+            $maps[]     = [$permission[0] => (bool) $permission[1]];
         }
+
         $return = [];
+
         array_walk($maps, function($item) use(&$return) {
             $return[key($item)] = current($item);
         });
+
         return $return;
     }
 
     /**
-     * @param type $model
-     * @return type
-     */
-    protected function complete($model)
-    {
-        return [
-            'path'        => $model->path,
-            'source-path' => $model->path,
-            'name'        => $model->name,
-            'full_name'   => $model->full_name,
-            'description' => $model->description,
-            'author'      => $model->author,
-            'url'         => $model->url,
-            'version'     => $model->version,
-            'config'      => ($model->handles) ? ['handles' => $model->handles] : [],
-            'autoload'    => ($model->autoload) ? [$model->autoload] : [],
-            'provides'    => ($model->provides) ? explode(';', $model->provides) : []
-        ];
-    }
-
-    /**
-     * @param type $name
-     * @return type
+     * @param string $name
+     * @return bool
      */
     protected function isCoreComponent($name)
     {
-        return $name == 'acl_antares';
+        return $name === 'core';
     }
 
     /**
      * cache prefix getter
-     * 
+     *
      * @return String
      */
-    protected function getCachePrefix()
+    protected static function getCachePrefix()
     {
         return config('antares/memory::permission.cache_prefix');
     }
 
     /**
-     * fetching all permissions
+     * Returns all permissions as array.
+     *
+     * @param null $brandId
+     * @return array
      */
     public function getAll($brandId = null)
     {
-        $key     = $this->getCachePrefix() . $brandId;
-        $columns = ['id', 'brand_id', 'name', 'full_name', 'status', 'description', 'author', 'url', 'path', 'version', 'handles', 'provides', 'actions', 'permissions', 'options'];
-        $builder = (!is_null($brandId)) ? static::select($columns)->where('brand_id', '=', $brandId)->orWhere('brand_id') : static::select($columns);
-        $models  = $builder->with(['attachedActions'])->get();
-        $return  = ['extensions' => ['active' => [], 'available' => [], 'modules' => []],];
-        $roles   = $this->role->lists('name', 'id')->toArray();
+        $models     = Permission::fetchAll($brandId);
+        $roles      = Role::query()->pluck('name', 'id')->toArray();
+        $actions    = Action::query()->pluck('name', 'id')->toArray();
 
+        $data = [
+            'components' => [],
+            'roles'     => $roles,
+            'actions'   => $actions,
+        ];
 
+        /* @var $model Permission */
         foreach ($models as $model) {
-            $actions = $model->attachedActions->lists('name', 'id')->toArray();
-            $isCore  = $this->isCoreComponent($model->name);
+            $name = $model->vendor . '/' . $model->name;
+            $data['components'][$name] = $this->mapPermissionsToArray($model->permissions);
+        }
 
-            if (!$isCore) {
-                $configuration = $this->complete($model);
-                $reversed      = array_reverse(explode('/', $model->path));
-                $name          = implode('/', [$reversed[1], $reversed[0]]);
+        return $data;
+    }
 
-                $return['extensions']['available'][$name] = $configuration;
-                if ($model->status) {
-                    $return['extensions']['active'][$name] = $configuration;
+    /**
+     * @param string $vendorName
+     * @param string $packageName
+     * @return Permission|null
+     */
+    public static function findByVendorAndName(string $vendorName, string $packageName) {
+        return Permission::where('vendor', $vendorName)->where('name', $packageName)->first();
+    }
+
+    public function updateComponentPermissions(string $vendorName, string $packageName, array $componentActions, array $acl, $brandId = null) {
+        try {
+            DB::beginTransaction();
+
+            $model = Permission::findByVendorAndName($vendorName, $packageName);
+
+            if ($model === null) {
+                return false;
+            }
+
+            foreach ($componentActions as $actionName) {
+                $componentActionAttributes = [
+                    'component_id' => $model->id,
+                    'name' => $actionName
+                ];
+
+                /* @var $action Action */
+                $action = $model->attachedActions()->where($componentActionAttributes)->first();
+
+                if ($action === null) {
+                    $action = $model->attachedActions()->getModel()->newInstance();
+                    $action->fill($componentActionAttributes);
                 }
-                if (starts_with($configuration['path'], 'base::src/modules')) {
-                    $return['extensions']['modules'][$name] = $configuration;
+
+                if (!$action->save()) {
+                    throw new PermissionNotSavedException('Unable to update the component actions configuration.');
                 }
             }
-            $key          = ($isCore) ? $model->name : 'acl_antares/' . $model->name;
-            $return[$key] = [
-                'acl'     => $this->permissions($model->permissions),
-                'actions' => $actions,
-                'roles'   => $roles
-            ];
+
+            $brands = ($brandId !== null) ? [$brandId] : $this->brands()->getModel()->pluck('id')->toArray();
+
+            foreach ($acl as $rule => $isAllowed) {
+                list($roleId, $actionId) = explode(':', $rule);
+
+                foreach ($brands as $brand) {
+                    $permissionModel = $this->permission()->getModel()
+                        ->where('brand_id', '=', $brand)
+                        ->where('action_id', '=', $actionId)
+                        ->where('component_id', '=', $model->id)
+                        ->where('role_id', '=', $roleId)
+                        ->first();
+
+                    $exists = $permissionModel === null ? false : $permissionModel->exists;
+
+                    if ($exists) {
+                        $permissionModel->allowed = (int)$isAllowed;
+                    } else {
+                        $permissionModel = $this->permission()->getModel()->newInstance()->fill([
+                            'brand_id' => $brand,
+                            'component_id' => $model->id,
+                            'role_id' => $roleId,
+                            'action_id' => $actionId,
+                            'allowed' => (int)$isAllowed
+                        ]);
+                    }
+
+                    if (!$permissionModel->save()) {
+                        throw new PermissionNotSavedException('Unable to update the component permissions.');
+                    }
+                }
+            }
+
+            DB::commit();
+
+            Cache::forget(self::getCachePrefix());
+            return true;
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::emergency($e);
+            return false;
         }
-        ksort($return['extensions']['active']);
-        ksort($return['extensions']['available']);
-        return $return;
     }
 
     /**
@@ -220,10 +290,17 @@ class Permission extends Eloquent
     public function updatePermissions($name, $values, $isNew = false, $brandId = null)
     {
         try {
-
-            $model = $this->query()->where('name', '=', $name)->first();
-            if (is_null($name)) {
+            if ($name === null) {
                 return false;
+            }
+
+            if(str_contains($name, '/')) {
+                list($vendorName, $packageName) = explode('/', $name);
+
+                $model = Permission::findByVendorAndName($vendorName, $packageName);
+            }
+            else {
+                $model = Permission::where('name', '=', $name)->first();
             }
 
 
@@ -240,22 +317,18 @@ class Permission extends Eloquent
                 $actions[$action->id] = $action->name;
             }
             $brands = !is_null($brandId) ? [$brandId] : $this->brands()->getModel()->lists('id')->toArray();
-
-
             foreach ($values['acl'] as $rule => $isAllowed) {
                 $rules    = explode(':', $rule);
                 $roleId   = $rules[0];
                 $actionId = array_search($values['actions'][$rules[1]], $actions);
-
                 foreach ($brands as $brand) {
                     $permissionModel = $this->permission()->getModel()
-                            ->where('brand_id', '=', $brand)
-                            ->where('action_id', '=', $actionId)
-                            ->where('component_id', '=', $model->id)
-                            ->where('role_id', '=', $roleId)
-                            ->get()
-                            ->first();
-
+                        ->where('brand_id', '=', $brand)
+                        ->where('action_id', '=', $actionId)
+                        ->where('component_id', '=', $model->id)
+                        ->where('role_id', '=', $roleId)
+                        ->get()
+                        ->first();
                     $exists = (is_null($permissionModel)) ? false : $permissionModel->exists;
                     if ($exists) {
                         $permissionModel->allowed = (int) $isAllowed;
@@ -269,7 +342,6 @@ class Permission extends Eloquent
                         ]);
                     }
                     if (!$permissionModel->save()) {
-
                         throw new PermissionNotSavedException('Unable update module permission');
                     }
                 }
