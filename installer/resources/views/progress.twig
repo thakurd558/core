@@ -1,0 +1,69 @@
+{% extends "antares/foundation::layouts.installer.main" %}
+{% block left_panel_content %}
+    {{ parent() }}
+    {% include 'antares/installer::partials._menu' with {'active': 5} %}
+{% endblock %}
+{% block content %}
+    <div class="card card--chart-small card--primary-light">
+        <div class="card__header">
+            <div class="card__header--top">
+                <span>Installation Progress (<span id="progress">0</span>%)</span>
+            </div>
+        </div>
+        <div class="card__content">
+            <div class="form-block">
+                <div id="install-progress-console" data-url="{{ previewUrl }}"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #install-progress-console {
+            width:100%;
+            padding:5px 10px;
+            box-sizing:border-box;
+            border:none;
+            border-radius:0;
+            background:{{ consoleTheme.black }};
+            color:white;
+            font-family: "Consolas", "Ubuntu Mono", "Monaco", monospace;
+            font-size:12px;
+            height:600px;
+            overflow-y:scroll;
+            overflow-x:hidden;
+            white-space:pre-wrap;
+        }
+    </style>
+
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <script type="text/javascript">
+        (function($) {
+            var
+                $progress = $('#progress'),
+                $console = $('#install-progress-console'),
+                url = $console.data('url');
+
+            (function refresh() {
+                $.get(url).then(function(response) {
+                    if( parseInt(response.progress) > parseInt($progress.text())) {
+                        $progress.text(response.progress);
+                    }
+
+                    if(response.redirect) {
+                        window.location.replace(response.redirect);
+                    }
+                    else {
+                        var text = response.console.replace(/\r\n/g,"\n");
+
+                        if(text !== $console.html()) {
+                            $console.html(text).scrollTop( $console.get(0).scrollHeight );
+                        }
+
+                        setTimeout(refresh, 2000);
+                    }
+                });
+            })();
+
+        })(jQuery);
+    </script>
+{% endblock %}
