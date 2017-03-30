@@ -36,6 +36,11 @@ class Manager {
     protected $filesystem;
 
     /**
+     * @var SettingsFactory
+     */
+    protected $settingsFactory;
+
+    /**
      * Collection of available packages.
      *
      * @var Extensions|ExtensionContract[]|null
@@ -47,11 +52,13 @@ class Manager {
      * @param FilesystemFinder $filesystemFinder
      * @param ExtensionsRepository $extensionsRepository
      * @param Filesystem $filesystem
+     * @param SettingsFactory $settingsFactory
      */
-    public function __construct(FilesystemFinder $filesystemFinder, ExtensionsRepository $extensionsRepository, Filesystem $filesystem) {
+    public function __construct(FilesystemFinder $filesystemFinder, ExtensionsRepository $extensionsRepository, Filesystem $filesystem, SettingsFactory $settingsFactory) {
         $this->filesystemFinder     = $filesystemFinder;
         $this->extensionsRepository = $extensionsRepository;
         $this->filesystem           = $filesystem;
+        $this->settingsFactory      = $settingsFactory;
     }
 
     /**
@@ -72,8 +79,6 @@ class Manager {
             ? $this->extensionsRepository->all()
             : new Collection();
 
-        $settingsFactory = new SettingsFactory();
-
         foreach($foundExtensions as $foundExtension) {
             $extension = $storedExtensions->first(function($key, ExtensionModel $extensionModel) use($foundExtension) {
                 return $extensionModel->getFullName() === $foundExtension->getPackage()->getName();
@@ -82,7 +87,7 @@ class Manager {
             $configFile = $foundExtension->getPath() . '/resources/config/settings.php';
 
             if($this->filesystem->exists($configFile)) {
-                $foundExtension->setSettings( $settingsFactory->createFromConfig($configFile) );
+                $foundExtension->setSettings( $this->settingsFactory->createFromConfig($configFile) );
             }
 
             if($extension instanceof ExtensionModel) {
