@@ -101,6 +101,7 @@ class Installer extends AbstractOperation {
             $this->extensionValidator->validateAssetsPath($extension);
 
             if(in_array('skip-composer', $flags, false) === false) {
+
                 $process = $this->composerHandler->run('composer require ' . $name, function($process, $type, $buffer) use($handler) {
                     $handler->operationInfo(new Operation($buffer));
                 });
