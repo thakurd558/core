@@ -19,7 +19,6 @@
  * @link       http://antaresproject.io
  */
 
-
 namespace Antares\Foundation\Providers;
 
 use Illuminate\Routing\Router;
@@ -73,12 +72,11 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * Bootstrap the application events.
      *
-     * @param  \Illuminate\Routing\Router  $router
-     *
      * @return void
      */
-    public function boot(Router $router)
+    public function boot()
     {
+        $router = $this->app->make(Router::class);
         $kernel = $this->app->make(Kernel::class);
         $this->registerRouteMiddleware($router, $kernel);
         $this->app->make('events')->fire('antares.ready');
