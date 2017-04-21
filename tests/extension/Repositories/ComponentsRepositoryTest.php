@@ -26,6 +26,8 @@ class ComponentsRepositoryTest extends \PHPUnit_Framework_TestCase
 {
 
     /**
+     * Components with branches.
+     *
      * @var array
      */
     protected $branches = [
@@ -34,12 +36,18 @@ class ComponentsRepositoryTest extends \PHPUnit_Framework_TestCase
         'ccc' => '2.0',
     ];
 
+    /**
+     * Test fetching components with branches.
+     */
     public function testGetBranches() {
         $repository = new ComponentsRepository($this->branches, [], []);
 
         $this->assertEquals($this->branches, $repository->getBranches());
     }
 
+    /**
+     * Test fetching required components with branches.
+     */
     public function testGetRequired() {
         $required = [
             'aaa',
@@ -56,6 +64,9 @@ class ComponentsRepositoryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $repository->getRequired());
     }
 
+    /**
+     * Test fetching required components without specified branches.
+     */
     public function testGetRequiredWithNoBranch() {
         $required = [
             'aaa',
@@ -72,6 +83,9 @@ class ComponentsRepositoryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $repository->getRequired());
     }
 
+    /**
+     * Test fetching optional components with branches.
+     */
     public function testGetOptional() {
         $optional = [
             'aaa',
@@ -88,6 +102,9 @@ class ComponentsRepositoryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $repository->getOptional());
     }
 
+    /**
+     * Test fetching optional components without specified branches.
+     */
     public function testGetOptionalWithNoBranch() {
         $optional = [
             'aaa',
@@ -104,6 +121,9 @@ class ComponentsRepositoryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $repository->getOptional());
     }
 
+    /**
+     * Test fetching target branch by given component.
+     */
     public function testGetTargetBranch() {
         $repository = new ComponentsRepository($this->branches, [], []);
 
@@ -111,6 +131,9 @@ class ComponentsRepositoryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('dev-master', $repository->getTargetBranch('eee'));
     }
 
+    /**
+     * Test fetching component with branches by specifies only components.
+     */
     public function testGetWithBranches() {
         $repository = new ComponentsRepository($this->branches, [], []);
 

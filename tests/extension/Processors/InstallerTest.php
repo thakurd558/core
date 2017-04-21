@@ -34,44 +34,61 @@ use Antares\Publisher\MigrateManager;
 use Mockery as m;
 use Symfony\Component\Process\Process;
 
-class InstalledTest extends OperationSetupTestCase
+class InstallerTest extends OperationSetupTestCase
 {
 
     /**
+     * Composer mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $composerHandler;
 
     /**
+     * Extension validator mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionValidator;
 
     /**
+     * Extension repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionsRepository;
 
     /**
+     * Migrate manager mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $migrateManager;
 
     /**
+     * Asset manager mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $assetManager;
 
     /**
+     * Settings factory mcokery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $settingsFactory;
 
     /**
+     * Components repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $componentsRepository;
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -88,12 +105,17 @@ class InstalledTest extends OperationSetupTestCase
     }
 
     /**
+     * Returns processor instance.
+     *
      * @return Installer
      */
     public function getOperationProcessor() {
         return new Installer($this->composerHandler, $this->extensionValidator, $this->container, $this->dispatcher, $this->kernel, $this->extensionsRepository, $this->settingsFactory, $this->componentsRepository);
     }
 
+    /**
+     * Test if installation finished successfully without composer.
+     */
     public function testWithoutComposerAsSuccess() {
         $processor = $this->getOperationProcessor();
 
@@ -145,6 +167,9 @@ class InstalledTest extends OperationSetupTestCase
         $processor->run($handler, $extension, ['skip-composer']);
     }
 
+    /**
+     * Test if installation finished with error due invalid assets.
+     */
     public function testWithFailedAssetsValidation() {
         $processor = $this->getOperationProcessor();
 
@@ -167,6 +192,9 @@ class InstalledTest extends OperationSetupTestCase
         $processor->run($handler, $extension, ['skip-composer']);
     }
 
+    /**
+     * Test if installation finished successfully with composer.
+     */
     public function testWithComposerAsSuccess() {
         $processor = $this->getOperationProcessor();
 

@@ -35,16 +35,24 @@ class AclTest extends ApplicationTestCase
     use ExtensionMockTrait;
 
     /**
+     * ACL migration mockery.
+     *
      * @var Mockery
      */
     protected $aclMigration;
 
+    /**
+     * {@inheritDoc}
+     */
     public function setUp() {
         parent::setUp();
 
         $this->aclMigration = m::mock(Migration::class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function tearDown()
     {
         parent::tearDown();
@@ -52,6 +60,8 @@ class AclTest extends ApplicationTestCase
     }
 
     /**
+     * Returns ACL processor instance.
+     *
      * @return Acl
      */
     protected function getProcessor() {
@@ -59,12 +69,17 @@ class AclTest extends ApplicationTestCase
     }
 
     /**
+     * Returns handler mockery.
+     *
      * @return \Mockery\MockInterface
      */
     protected function buildOperationHandlerMock() {
         return m::mock(OperationHandlerContract::class);
     }
 
+    /**
+     * Test processor without ACL file.
+     */
     public function testWithoutFile() {
         $extension = $this->buildExtensionMock('aaa')
             ->shouldReceive('getPath')
@@ -89,9 +104,11 @@ class AclTest extends ApplicationTestCase
         $this->app->instance('files', $file);
 
         $this->getProcessor()->import($handler, $extension);
-
     }
 
+    /**
+     * Test migration with ACL file but invalid returned object.
+     */
     public function testWithoutValidObject() {
         $extension = $this->buildExtensionMock('aaa')
             ->shouldReceive('getPath')
@@ -116,6 +133,9 @@ class AclTest extends ApplicationTestCase
         $this->getProcessor()->import($handler, $extension);
     }
 
+    /**
+     * Test if exception occurs.
+     */
     public function testException() {
         $extension = $this->buildExtensionMock('aaa')
             ->shouldReceive('getPath')
@@ -141,6 +161,9 @@ class AclTest extends ApplicationTestCase
         $this->getProcessor()->import($handler, $extension);
     }
 
+    /**
+     * Test storing ACL without reload option.
+     */
     public function testWithoutReload() {
         $extension = $this->buildExtensionMock('aaa')
             ->shouldReceive('getPath')
@@ -178,6 +201,9 @@ class AclTest extends ApplicationTestCase
         $this->getProcessor()->import($handler, $extension);
     }
 
+    /**
+     * Test storing ACL with reload option.
+     */
     public function testWithReload() {
         $extension = $this->buildExtensionMock('aaa')
             ->shouldReceive('getPath')

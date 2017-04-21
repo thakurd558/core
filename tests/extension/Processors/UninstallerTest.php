@@ -34,30 +34,43 @@ class UninstallerTest extends OperationSetupTestCase
 {
 
     /**
+     * Composer mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $composerHandler;
 
     /**
+     * Extension repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionsRepository;
 
     /**
+     * Migrate manager mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $migrateManager;
 
     /**
+     * Asset manager mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $assetManager;
 
     /**
+     * Component repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $componentRepository;
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -72,12 +85,17 @@ class UninstallerTest extends OperationSetupTestCase
     }
 
     /**
+     * Returns processor instance.
+     *
      * @return Uninstaller
      */
     public function getOperationProcessor() {
         return new Uninstaller($this->composerHandler, $this->container, $this->dispatcher, $this->kernel, $this->extensionsRepository, $this->componentRepository);
     }
 
+    /**
+     * Test if uninstallation finished successfully without composer.
+     */
     public function testWithoutComposerAsSuccess() {
         $processor = $this->getOperationProcessor();
 
@@ -115,6 +133,9 @@ class UninstallerTest extends OperationSetupTestCase
         $processor->run($handler, $extension);
     }
 
+    /**
+     * Test if uninstallation finished successfully with composer.
+     */
     public function testWithComposerAsSuccess() {
         $processor = $this->getOperationProcessor();
 
@@ -167,6 +188,9 @@ class UninstallerTest extends OperationSetupTestCase
         $processor->run($handler, $extension, ['purge']);
     }
 
+    /**
+     * Test exception when uninstallation failed.
+     */
     public function testWithException() {
         $processor = $this->getOperationProcessor();
 
@@ -204,6 +228,9 @@ class UninstallerTest extends OperationSetupTestCase
         $processor->run($handler, $extension, ['purge']);
     }
 
+    /**
+     * Test exception when composer failed.
+     */
     public function testWithExceptionInComposer() {
         $processor = $this->getOperationProcessor();
 
@@ -256,6 +283,9 @@ class UninstallerTest extends OperationSetupTestCase
         $processor->run($handler, $extension, ['purge']);
     }
 
+    /**
+     * Test exception for uninstalling required components.
+     */
     public function testWithExceptionForRequiredComponent() {
         $processor = $this->getOperationProcessor();
 

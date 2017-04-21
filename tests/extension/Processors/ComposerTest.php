@@ -32,15 +32,22 @@ class ComposerTest extends ApplicationTestCase
 {
 
     /**
+     * Dispatcher mockery.
+     *
      * @var Mockery
      */
     protected $dispatcher;
 
     /**
+     * Composer mockery.
+     *
      * @var Mockery
      */
     protected $composerHandler;
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -48,6 +55,9 @@ class ComposerTest extends ApplicationTestCase
         $this->composerHandler  = m::mock(ComposerHandler::class);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function tearDown()
     {
         parent::tearDown();
@@ -55,6 +65,8 @@ class ComposerTest extends ApplicationTestCase
     }
 
     /**
+     * Returns processor instance.
+     *
      * @return Composer
      */
     protected function getProcessor() {
@@ -62,12 +74,17 @@ class ComposerTest extends ApplicationTestCase
     }
 
     /**
+     * Returns handler mockery.
+     *
      * @return \Mockery\MockInterface
      */
     protected function buildOperationHandlerMock() {
         return m::mock(OperationHandlerContract::class);
     }
 
+    /**
+     * Test without provided extensions.
+     */
     public function testWithoutExtensions() {
         $handler = $this->buildOperationHandlerMock()
             ->shouldReceive('operationInfo')
@@ -78,6 +95,9 @@ class ComposerTest extends ApplicationTestCase
         $this->getProcessor()->run($handler, []);
     }
 
+    /**
+     * Test if operation finished successfully.
+     */
     public function testAsSuccess() {
         $handler = $this->buildOperationHandlerMock()
             ->shouldReceive('operationInfo')

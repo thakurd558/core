@@ -34,35 +34,50 @@ class FilesystemFinderTest extends \PHPUnit_Framework_TestCase
 {
 
     /**
+     * Application mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $application;
 
     /**
+     * Config repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $configRepository;
 
     /**
+     * Extension validator mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionValidator;
 
     /**
+     * Extension factory mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionFactory;
 
     /**
+     * File system mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $filesystem;
 
     /**
+     * Path of providers.
+     *
      * @var string
      */
     protected $providersPath = '';
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -77,20 +92,28 @@ class FilesystemFinderTest extends \PHPUnit_Framework_TestCase
             ->getMock();
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function tearDown() {
         parent::tearDown();
         m::close();
     }
 
     /**
+     * Returns file system finder instance.
+     *
      * @return FilesystemFinder
      */
     protected function getFinderInstance() {
         return new FilesystemFinder($this->configRepository, $this->extensionValidator, $this->extensionFactory, $this->filesystem);
     }
 
+    /**
+     * Test exception for invalid returned paths.
+     */
     public function testFindExtensionWithException() {
-        $this->setExpectedException(ExtensionException::class);
+        $this->expectException(ExtensionException::class);
 
         $paths = [
             'dummy/component/path',
@@ -111,6 +134,9 @@ class FilesystemFinderTest extends \PHPUnit_Framework_TestCase
         $this->getFinderInstance()->findExtensions();
     }
 
+    /**
+     * Test if finder fetch correct type of components.
+     */
     public function testFindExtension() {
         $paths = [
             'dummy/component_one/path',

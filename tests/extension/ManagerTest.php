@@ -37,40 +37,57 @@ class ManagerTest extends TestCase
 {
 
     /**
+     * Application mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $application;
 
     /**
+     * Config repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $configRepository;
 
     /**
+     * File system finder mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $filesystemFinder;
 
     /**
+     * Extension repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionsRepository;
 
     /**
+     * File system mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $filesystem;
 
     /**
+     * Settings factory mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $settingsFactory;
 
     /**
+     * Path for providers.
+     *
      * @var string
      */
     protected $providersPath = '';
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -82,18 +99,26 @@ class ManagerTest extends TestCase
         $this->settingsFactory      = m::mock(SettingsFactory::class);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function tearDown() {
         parent::tearDown();
         m::close();
     }
 
     /**
+     * Returns Manager instance.
+     *
      * @return Manager
      */
     protected function getManagerInstance() {
         return new Manager($this->filesystemFinder, $this->extensionsRepository, $this->filesystem, $this->settingsFactory);
     }
 
+    /**
+     * Tests empty collection of components.
+     */
     public function testEmptyAvailableExtensions() {
         $foundExtensions = new Extensions();
 
@@ -111,6 +136,9 @@ class ManagerTest extends TestCase
         $this->assertCount(0, $this->getManagerInstance()->getAvailableExtensions());
     }
 
+    /**
+     * Test if fetching components executed only once.
+     */
     public function testIfAvailableExtensionsAreExecutedOnce() {
         $foundExtensions = new Extensions();
 
@@ -130,6 +158,9 @@ class ManagerTest extends TestCase
         $manager->getAvailableExtensions();
     }
 
+    /**
+     * Test fetching components with DB models.
+     */
     public function testAvailableExtensionsWithModels() {
         $package1 = m::mock(CompletePackageInterface::class)
             ->shouldReceive('getName')

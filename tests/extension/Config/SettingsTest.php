@@ -26,17 +26,26 @@ use Antares\Extension\Contracts\Config\SettingsContract;
 class SettingsTest extends \PHPUnit_Framework_TestCase
 {
 
+    /**
+     * Test if Settings are instance of SettingsContract.
+     */
     public function testContract() {
         $this->assertInstanceOf(SettingsContract::class, new Settings());
     }
 
+    /**
+     * Test if empty Settings does not have any data.
+     */
     public function testHasDataMethodWithEmptyData() {
         $settings = new Settings();
 
         $this->assertFalse($settings->hasData());
     }
 
-    public function testGetDataMethod() {
+    /**
+     * Test fetching data by name.
+     */
+    public function testGetValueByNameMethod() {
         $data = [
             'a' => 'foo',
             'b' => 'bar',
@@ -50,6 +59,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('default-value', $settings->getValueByName('d', 'default-value'));
     }
 
+    /**
+     * Test updating settings.
+     */
     public function testUpdateDataMethod() {
         $data = [
             'a' => 'foo',
@@ -73,7 +85,10 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $settings->getData());
     }
 
-    public function testGetValueByNameMethod() {
+    /**
+     * Test fetching all data.
+     */
+    public function testGetDataMethod() {
         $data = [
             'a' => 'foo',
             'b' => 'bar',
@@ -85,6 +100,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($settings->hasData());
     }
 
+    /**
+     * Test fetching validation rules.
+     */
     public function testGetValidationRulesMethod() {
         $rules = [
             'a' => 'foo',
@@ -96,6 +114,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($rules, $settings->getValidationRules());
     }
 
+    /**
+     * Test fetching validation phrases.
+     */
     public function testGetValidationPhrasesMethod() {
         $phrases = [
             'a' => 'foo',
@@ -107,6 +128,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($phrases, $settings->getValidationPhrases());
     }
 
+    /**
+     * Test fetching all data with validations.
+     */
     public function testToArrayMethod() {
         $data = [
             'a' => 'foo',
@@ -131,6 +155,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $settings->toArray());
     }
 
+    /**
+     * Test if custom URL is empty string.
+     */
     public function testEmptyCustomUrl() {
         $rules = [
             'a' => 'foo',
@@ -142,6 +169,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('', $settings->getCustomUrl());
     }
 
+    /**
+     * Test if custom URL is correct.
+     */
     public function testExistedCustomUrl() {
         $rules = [
             'a' => 'foo',

@@ -31,20 +31,29 @@ class ActivatorTest extends OperationSetupTestCase
 {
 
     /**
+     * Extension repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionsRepository;
 
     /**
+     * ACL manager mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $aclMigration;
 
     /**
+     * Components repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $componentRepository;
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -54,12 +63,17 @@ class ActivatorTest extends OperationSetupTestCase
     }
 
     /**
+     * Returns processor instance.
+     *
      * @return Activator
      */
     public function getOperationProcessor() {
         return new Activator($this->container, $this->dispatcher, $this->kernel, $this->extensionsRepository, $this->aclMigration, $this->componentRepository);
     }
 
+    /**
+     * Test if activation finished successfully.
+     */
     public function testAsSuccess() {
         $processor = $this->getOperationProcessor();
 
@@ -88,6 +102,9 @@ class ActivatorTest extends OperationSetupTestCase
         $processor->run($handler, $extension);
     }
 
+    /**
+     * Test if activation finished with exception.
+     */
     public function testWithException() {
         $processor = $this->getOperationProcessor();
 

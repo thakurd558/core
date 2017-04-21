@@ -25,32 +25,45 @@ use Antares\Extension\Factories\SettingsFactory;
 use Illuminate\Filesystem\Filesystem;
 use Mockery as m;
 
-class SettingsTest extends \PHPUnit_Framework_TestCase
+class SettingsFactoryTest extends \PHPUnit_Framework_TestCase
 {
 
     /**
+     * Filesystem mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $filesystem;
 
+    /**
+     * {@inheritDoc}
+     */
     public function setUp() {
         parent::setUp();
 
         $this->filesystem    = m::mock(Filesystem::class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function tearDown() {
         parent::tearDown();
         m::close();
     }
 
     /**
+     * Returns settings factory instance.
+     *
      * @return SettingsFactory
      */
     protected function getFactory() {
         return new SettingsFactory($this->filesystem);
     }
 
+    /**
+     * Test is all data are empty.
+     */
     public function testCreateFromDataMethodAsEmpty() {
         $configData = [];
 
@@ -61,6 +74,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals([], $settings->getValidationPhrases());
     }
 
+    /**
+     * Test if data are correctly returned.
+     */
     public function testCreateFromDataMethodWithConfig() {
         $data = [
             'a' => 'foo',
@@ -86,6 +102,9 @@ class SettingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($phrases, $settings->getValidationPhrases());
     }
 
+    /**
+     * Test creating from config file.
+     */
     public function testCreateFromConfig() {
         $data = [
             'a' => 'foo',

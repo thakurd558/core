@@ -28,8 +28,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test Antares\Extension\RouteGenerator construct proper route.
-     *
-     * @test
      */
     public function testConstructProperRoute()
     {
@@ -58,6 +56,11 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('http://localhost/laravel/foo', $stub->root());
     }
 
+    /**
+     * Data providers for tests.
+     *
+     * @return array
+     */
     public function isDataProvider()
     {
         return [
@@ -70,7 +73,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
     /**
      * Test Antares\Extension\RouteGenerator::is() method without domain.
      *
-     * @test
      * @dataProvider isDataProvider
      */
     public function testIsMethodWithoutDomain($path, $pattern, $expected)
@@ -88,7 +90,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
     /**
      * Test Antares\Extension\RouteGenerator::path method with domain.
      *
-     * @test
      * @dataProvider isDataProvider
      */
     public function testIsMethodWithDomain($path, $pattern, $expected)
@@ -107,7 +108,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
      * Test Antares\Extension\RouteGenerator::path method with domain
      * and prefix.
      *
-     * @test
      * @dataProvider isDataProvider
      */
     public function testIsMethodWithDomainAndPrefix($path, $pattern, $expected)
@@ -124,8 +124,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test Antares\Extension\RouteGenerator::path method without domain.
-     *
-     * @test
      */
     public function testPathMethodWithoutDomain()
     {
@@ -143,8 +141,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test Antares\Extension\RouteGenerator::path method with domain.
-     *
-     * @test
      */
     public function testPathMethodWithDomain()
     {
@@ -162,8 +158,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test Antares\Extension\RouteGenerator with domain route.
-     *
-     * @test
      */
     public function testRouteWithDomain()
     {
@@ -201,8 +195,6 @@ class RouteGeneratorTest extends \PHPUnit_Framework_TestCase
     /**
      * Test Antares\Extension\RouteGenerator with domain route when
      * domain name contain wildcard.
-     *
-     * @test
      */
     public function testRouteWithDomainGivenWildcard()
     {

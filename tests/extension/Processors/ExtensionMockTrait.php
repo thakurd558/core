@@ -16,6 +16,8 @@ use Antares\Extension\Contracts\ExtensionContract;
 trait ExtensionMockTrait {
 
     /**
+     * Returns extension mockery with given name.
+     *
      * @param $name
      * @return \Mockery\MockInterface
      */

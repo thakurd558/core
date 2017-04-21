@@ -32,20 +32,29 @@ class DeactivatorTest extends OperationSetupTestCase
 {
 
     /**
+     * Extension repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $extensionsRepository;
 
     /**
+     * ACL manager mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $aclMigration;
 
     /**
+     * Components repository mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $componentRepository;
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -61,6 +70,9 @@ class DeactivatorTest extends OperationSetupTestCase
         return new Deactivator($this->container, $this->dispatcher, $this->kernel, $this->extensionsRepository, $this->aclMigration, $this->componentRepository);
     }
 
+    /**
+     * Test if deactivation finished successfully.
+     */
     public function testAsSuccess() {
         $processor = $this->getOperationProcessor();
 
@@ -95,6 +107,9 @@ class DeactivatorTest extends OperationSetupTestCase
         $processor->run($handler, $extension);
     }
 
+    /**
+     * Test if deactivation finished with exception.
+     */
     public function testWithException() {
         $processor = $this->getOperationProcessor();
 
@@ -125,6 +140,9 @@ class DeactivatorTest extends OperationSetupTestCase
         $processor->run($handler, $extension);
     }
 
+    /**
+     * Test if deactivation finished with exception for required component.
+     */
     public function testWithExceptionForRequiredComponent() {
         $processor = $this->getOperationProcessor();
 

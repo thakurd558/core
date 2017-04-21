@@ -33,22 +33,31 @@ abstract class OperationSetupTestCase extends \PHPUnit_Framework_TestCase
 {
 
     /**
+     * Container mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $container;
 
     /**
+     * Dispatcher mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $dispatcher;
 
     /**
+     * Kernel mockery.
+     *
      * @var \Mockery\MockInterface
      */
     protected $kernel;
 
     use ExtensionMockTrait;
 
+    /**
+     * {@inheritdoc}
+     */
     public function setUp() {
         parent::setUp();
 
@@ -57,12 +66,17 @@ abstract class OperationSetupTestCase extends \PHPUnit_Framework_TestCase
         $this->kernel       = m::mock(Kernel::class);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function tearDown() {
         parent::tearDown();
         m::close();
     }
 
     /**
+     * Return handler mockery.
+     *
      * @return \Mockery\MockInterface
      */
     protected function buildOperationHandlerMock() {

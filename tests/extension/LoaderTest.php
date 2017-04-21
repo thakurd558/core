@@ -10,13 +10,17 @@ use Antares\Extension\Loader;
 class ProviderRepositoryTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * Teardown the test environment.
+     * {@inheritdoc}
      */
     public function tearDown()
     {
+        parent::tearDown();
         m::close();
     }
 
+    /**
+     * Test registering providers.
+     */
     public function testRegisterExtensionProviders() {
         $service = 'Antares\Extension\TestCase\FooServiceProvider';
         $manifestPath = '/var/www/laravel/bootstrap/cache';

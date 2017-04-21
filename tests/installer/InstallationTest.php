@@ -58,6 +58,7 @@ class InstallationTest extends ApplicationTestCase
      */
     public function tearDown()
     {
+        parent::tearDown();
         m::close();
     }
 

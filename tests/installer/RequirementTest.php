@@ -41,6 +41,7 @@ class RequirementTest extends ApplicationTestCase
      */
     public function tearDown()
     {
+        parent::tearDown();
         m::close();
     }
 

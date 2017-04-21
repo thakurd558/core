@@ -35,7 +35,7 @@ class BrandTest extends ApplicationTestCase
     use EloquentConnectionTrait;
 
     /**
-     * @var Antares\Brands\Http\Presenters\Brand
+     * @var \Antares\Brands\Http\Presenters\Brand
      */
     protected $stub;
 
@@ -45,6 +45,7 @@ class BrandTest extends ApplicationTestCase
     public function setUp()
     {
         parent::setUp();
+
         $container    = m::mock('Illuminate\Container\Container');
         $container->shouldReceive('make')->with('antares.asset')
                 ->andReturn($assetFactory = m::mock('Antares\Asset\Factory'))
@@ -125,13 +126,13 @@ class BrandTest extends ApplicationTestCase
 
         $grammar->shouldReceive('compileInsertGetId')
                 ->andReturn('');
-        $grammar->shouldReceive('compileSelect')->once()->andReturn('SELECT * FROM `tbl_widgets_params` WHERE brand_id=? and uid=? and resource=?');
+        $grammar->shouldReceive('compileSelect')->andReturn('SELECT * FROM `tbl_widgets_params` WHERE brand_id=? and uid=? and resource=?');
         $connection->shouldReceive('select')
-                ->once()
+
                 ->withAnyArgs()
                 ->andReturn(null);
         $processor->shouldReceive('processInsertGetId')->andReturn(1);
-        $processor->shouldReceive('processSelect')->once()->andReturn([]);
+        $processor->shouldReceive('processSelect')->andReturn([]);
 
 
         $foundation->shouldReceive('make')->with("antares.brand")->andReturn($model)
@@ -139,6 +140,11 @@ class BrandTest extends ApplicationTestCase
         $this->app['antares.app'] = $foundation;
         $this->app['antares.acl'] = $acl;
         $this->app['view']->addNamespace('antares/brands', realpath(base_path() . '../../../../components/brands/resources/views'));
+    }
+
+    public function tearDown() {
+        parent::tearDown();
+        m::close();
     }
 
     /**
